@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'views/roommate_input_screen.dart'; 
+import 'views/main_wrapper.dart';
 
 void main() {
   runApp(const RoomerApp());
@@ -22,7 +23,7 @@ class RoomerApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF8FAFC), 
         fontFamily: 'Lato', 
       ),
-      home: const RoommateInputScreen(), 
+      home: const MainWrapper(), 
     );
   }
 }
