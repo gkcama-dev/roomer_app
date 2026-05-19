@@ -79,4 +79,65 @@ class AuthService {
   Stream<User?> get userStream {
     return _auth.authStateChanges();
   }
+
+// 3. 🏢 CREATE NEW GROUP FUNCTION
+  Future<String?> createGroup(String groupName) async {
+    try {
+      User? currentUser = _auth.currentUser;
+      if (currentUser == null) return null;
+
+      // ඉලක්කම් 6ක අහඹු කෝඩ් එකක් සෑදීම (Random 6-digit Code)
+      final String groupCode = (100000 + (double.parse((_auth.currentUser!.uid.hashCode % 900000).toString()).toInt() % 900000)).toString();
+
+      // Firestore එකේ 'groups' කියලා අලුත් collection එකක් හදනවා
+      await _db.collection('groups').doc(groupCode).set({
+        'groupName': groupName,
+        'groupCode': groupCode,
+        'createdBy': currentUser.uid,
+        'members': [currentUser.uid], // මුල්ම සාමාජිකයා විදිහට Creatorව දානවා
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // දැනට ලොග් වෙලා ඉන්න පරිශීලකයාගේ (User) ගිණුමේ 'groupId' එක update කරනවා
+      await _db.collection('users').doc(currentUser.uid).update({
+        'groupId': groupCode,
+      });
+
+      return groupCode; // හදපු Group Code එක ආපසු යවනවා UI එකට පෙන්වන්න
+    } catch (e) {
+      print("Create Group Error: ${e.toString()}");
+      return null;
+    }
+  }
+
+  // JOIN EXISTING GROUP FUNCTION
+  Future<bool> joinGroup(String groupCode) async {
+    try {
+      User? currentUser = _auth.currentUser;
+      if (currentUser == null) return false;
+
+      
+      DocumentSnapshot groupDoc = await _db.collection('groups').doc(groupCode).get();
+
+      if (groupDoc.exists) {
+       
+        await _db.collection('groups').doc(groupCode).update({
+          'members': FieldValue.arrayUnion([currentUser.uid]),
+        });
+
+        
+        await _db.collection('users').doc(currentUser.uid).update({
+          'groupId': groupCode,
+        });
+
+        return true; 
+      } else {
+        return false; 
+      }
+    } catch (e) {
+      print("Join Group Error: ${e.toString()}");
+      return false;
+    }
+  }
+
 }
