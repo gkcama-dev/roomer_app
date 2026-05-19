@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "178864375103",
+    "project_id": "roomer-38d04",
+    "storage_bucket": "roomer-38d04.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:178864375103:android:4b783621569cbb3bef3f8a",
+        "android_client_info": {
+          "package_name": "com.example.roomer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9maaVv4FyCUY47T9Nrp7pOPP00ovNloU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
