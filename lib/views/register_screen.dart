@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:roomer/services/auth_service.dart';
-import 'main_wrapper.dart';
+import 'login_screen.dart';
+import 'group_setup_screen.dart';
+import 'custom_alert.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -18,15 +20,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
 
   void _register() async {
+    // 1. Check if fields are empty
     if (_nameController.text.isEmpty || _emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+      CustomAlert.show(context: context, message: 'Please fill all fields', isSuccess: false);
       return;
     }
 
     setState(() => _isLoading = true);
 
+    // 2. Call Firebase Registration
     User? user = await _authService.registerWithEmail(
       _nameController.text,
       _emailController.text,
@@ -37,19 +39,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (user != null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration Successful!')),
-        );
+        // Show success snackbar and wait for it to close before navigating
+        CustomAlert.show(context: context, message: 'Registration Successful! 🎉', isSuccess: true);
+        // Wait a short moment so the user sees the success alert before navigation
+        await Future.delayed(const Duration(milliseconds: 700));
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MainWrapper()),
+          MaterialPageRoute(builder: (context) => const GroupSetupScreen()),
         );
       }
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration Failed. Email might be already in use.')),
-        );
+        CustomAlert.show(context: context, message: 'Registration Failed. Email might be already in use.', isSuccess: false);
       }
     }
   }
@@ -64,9 +66,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Create Account', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-              const SizedBox(height: 5),
-              const Text('Sign up to start splitting bills with roommates', style: TextStyle(color: Colors.grey)),
+              Center(
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Image.asset(
+                        'assets/images/roomer-light-logo.png',
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                  ],
+                ),
+              ),
+              const Center(
+                child: Column(
+                  children: [
+                    Text('Create Account', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                    SizedBox(height: 5),
+                    Text('Sign up to start splitting bills with roommates', style: TextStyle(color: Colors.grey)),
+                  ],
+                ),
+              ),
               const SizedBox(height: 35),
 
               // Full Name Input
@@ -131,6 +159,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text('Sign Up', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Already have an account? '),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LoginScreen()),
+                      );
+                    },
+                    child: const Text(
+                      'Login here',
+                      style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 20),
             ],
