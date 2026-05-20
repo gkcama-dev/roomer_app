@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:roomer/services/auth_service.dart';
 import 'main_wrapper.dart';
+import 'custom_alert.dart';
 
 class GroupSetupScreen extends StatefulWidget {
   const GroupSetupScreen({super.key});
@@ -18,9 +19,7 @@ class _GroupSetupScreenState extends State<GroupSetupScreen> {
   // NEW GROUP CREATION LOGIC
   void _handleCreateGroup() async {
     if (_groupNameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a boarding or group name')),
-      );
+      CustomAlert.show(context: context, message: 'Please enter a boarding or group name', isSuccess: false);
       return;
     }
 
@@ -80,9 +79,7 @@ class _GroupSetupScreenState extends State<GroupSetupScreen> {
 
     if (success) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Successfully joined the group! 😍')),
-        );
+        CustomAlert.show(context: context, message: 'Successfully joined the group! 😍', isSuccess: true);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainWrapper()),
@@ -90,9 +87,7 @@ class _GroupSetupScreenState extends State<GroupSetupScreen> {
       }
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid Group Code. Please try again.')),
-        );
+        CustomAlert.show(context: context, message: 'Invalid Group Code. Please try again.', isSuccess: false);
       }
     }
   }

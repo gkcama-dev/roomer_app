@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:roomer/services/auth_service.dart';
 import 'package:roomer/views/register_screen.dart';
 import 'main_wrapper.dart';
+import 'custom_alert.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,9 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _login() async {
     
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all fields')),
-      );
+      CustomAlert.show(context: context, message: 'Please fill all fields', isSuccess: false);
       return;
     }
 
@@ -47,9 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login Failed. Check your email & password.')),
-        );
+        CustomAlert.show(context: context, message: 'Login Failed. Check your email & password.', isSuccess: false);
       }
     }
   }
