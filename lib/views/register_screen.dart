@@ -20,7 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
 
   void _register() async {
-    // 1. Check if fields are empty
+    // Check if fields are empty
     if (_nameController.text.isEmpty || _emailController.text.isEmpty || _passwordController.text.isEmpty) {
       CustomAlert.show(context: context, message: 'Please fill all fields', isSuccess: false);
       return;
@@ -28,7 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isLoading = true);
 
-    // 2. Call Firebase Registration
+    // Call Firebase Registration
     User? user = await _authService.registerWithEmail(
       _nameController.text,
       _emailController.text,
