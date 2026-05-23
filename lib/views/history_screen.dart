@@ -1,69 +1,158 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart'; 
+import 'package:roomer/services/expense_service.dart';
+import 'package:roomer/models/expense_model.dart';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
   @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  final ExpenseService _expenseService = ExpenseService();
+  String _groupId = '';
+  Map<String, String> _memberNames = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGroupAndMembers();
+  }
+
+  // Fetch critical group profile setups first
+  void _loadGroupAndMembers() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (userDoc.exists && userDoc.data() != null) {
+        String gid = (userDoc.data() as Map<String, dynamic>)['groupId']?.toString() ?? '';
+
+        if (gid.isNotEmpty) {
+          DocumentSnapshot groupDoc = await FirebaseFirestore.instance.collection('groups').doc(gid).get();
+          if (groupDoc.exists && groupDoc.data() != null) {
+            List members = (groupDoc.data() as Map<String, dynamic>)['members'] ?? [];
+
+            Map<String, String> namesTemp = {};
+            for (String uid in members) {
+              DocumentSnapshot mDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+              namesTemp[uid] = mDoc.exists ? (mDoc.data() as Map<String, dynamic>)['name'] ?? 'Roommate' : 'Roommate';
+            }
+
+            if (mounted) {
+              setState(() {
+                _groupId = gid;
+                _memberNames = namesTemp;
+                _isLoading = false;
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // DELETE EXPENSE LOGIC FROM FIRESTORE
+  void _deleteTransaction(String expenseId) async {
+    try {
+      await FirebaseFirestore.instance.collection('expenses').doc(expenseId).delete();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Transaction deleted successfully! 🧹')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to delete transaction')),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading || _groupId.isEmpty) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    // 💡 [SECURITY FIX] දැනට ලොග් වෙලා ඉන්න සැබෑ පරිශීලකයාගේ UID එක ලබා ගැනීම
+    final String currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('History', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Transaction History', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
         centerTitle: true,
-        automaticallyImplyLeading: false, 
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          //Expense Added Success Toast 
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)
-              ],
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.check_circle, color: Color(0xFF10B981), size: 20),
-                SizedBox(width: 8),
-                Text('Expense added!', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 25),
+      body: StreamBuilder<List<ExpenseModel>>(
+        stream: _expenseService.getExpenses(_groupId), 
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-          // 💳 History Expense Card (Sample Data)
-          _buildHistoryCard(
-            category: 'Food',
-            date: '5/12/2026',
-            paidBy: 'Geeth',
-            amount: '600.00',
-            splitters: ['Laky', 'Geeth', 'Pramod'],
-          ),
-          
-          _buildHistoryCard(
-            category: 'Room Rent',
-            date: '5/01/2026',
-            paidBy: 'Laky',
-            amount: '15,000.00',
-            splitters: ['Laky', 'Geeth', 'Pramod'],
-          ),
-        ],
+          List<ExpenseModel> transactions = snapshot.data ?? [];
+
+          if (transactions.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.receipt_long_rounded, size: 60, color: Colors.grey),
+                  SizedBox(height: 15),
+                  Text('No transactions recorded yet!', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: transactions.length,
+            itemBuilder: (context, index) {
+              final exp = transactions[index];
+
+              // Check if this is a settle-up log or a regular expense
+              bool isSettleUp = exp.description.toLowerCase().contains('settled up');
+              
+              // Formatting the date nicely: e.g., May 21, 2026
+              String formattedDate = DateFormat('MMM dd, yyyy - hh:mm a').format(exp.createdAt);
+
+              return _buildHistoryCard(
+                expenseId: exp.id,
+                description: exp.description,
+                date: formattedDate,
+                paidBy: exp.paidByName,
+                amount: exp.amount.toStringAsFixed(2),
+                isSettleUp: isSettleUp,
+                memberNamesList: _memberNames.values.toList(),
+                // 💡 [SECURITY CHECK] වියදම ඇතුළත් කළ කෙනා සහ දැනට ලොග් වී ඉන්න කෙනා සමාන නම් පමණක් Delete පෙන්වයි
+                showDeleteButton: exp.paidBy == currentUserId,
+              );
+            },
+          );
+        },
       ),
     );
   }
 
-  // History Card 
+  // Refactored Reusable History Card Component
   Widget _buildHistoryCard({
-    required String category,
+    required String expenseId,
+    required String description,
     required String date,
     required String paidBy,
     required String amount,
-    required List<String> splitters,
+    required bool isSettleUp,
+    required List<String> memberNamesList,
+    required bool showDeleteButton, // 💡 Parameters එකක් ලෙස එකතු කළා
   }) {
     return Card(
       color: Colors.white,
@@ -80,62 +169,83 @@ class HistoryScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                // 🟢 Category Icon Container
+                // Dynamic Colored Icon based on Transaction type
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE6F4EA),
+                    color: isSettleUp ? const Color(0xFFFFEDD5) : const Color(0xFFE6F4EA), // Orange vs Green
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.menu_book_rounded, color: Color(0xFF10B981)), // කෑම/පොත් සඳහා
+                  child: Icon(
+                    isSettleUp ? Icons.handshake_rounded : Icons.shopping_bag_rounded, 
+                    color: isSettleUp ? const Color(0xFFF97316) : const Color(0xFF10B981)
+                  ),
                 ),
                 const SizedBox(width: 15),
-                // Details
+                // Text Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(category, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text(date, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                      const SizedBox(height: 4),
+                      Text(description, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
+                      const SizedBox(height: 2),
+                      Text(date, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                      const SizedBox(height: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(8)),
-                        child: Text('Paid by $paidBy', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black)),
+                        child: Text(
+                          isSettleUp ? 'Settlement Payment' : 'Paid by $paidBy', 
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569))
+                        ),
                       ),
                     ],
                   ),
                 ),
-                // Amount & Delete
+                // Amount & Functional Delete Button
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('- $amount', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                    Text(
+                      'LKR $amount', 
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isSettleUp ? const Color(0xFFF97316) : const Color(0xFF1E293B))
+                    ),
                     const SizedBox(height: 5),
-                    TextButton(
-                      style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(50, 30), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                      onPressed: () {},
-                      child: const Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w500)),
-                    )
+                    
+                    // 💡 [SECURITY UI] Deletion අයිතිය තියෙන කෙනාට විතරක් බටන් එක පෙන්වයි, නැත්නම් හංගයි
+                    if (showDeleteButton) 
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero, 
+                          minimumSize: const Size(50, 30), 
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap
+                        ),
+                        onPressed: () => _deleteTransaction(expenseId), 
+                        child: const Text('Delete', style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.bold)),
+                      ),
                   ],
                 )
               ],
             ),
-            const Divider(height: 30, color: Color(0xFFF1F5F9)),
-            // Split Between Section
-            const Text('Split between', style: TextStyle(color: Colors.grey, fontSize: 12)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: splitters.map((name) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE6F4EA),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(name, style: const TextStyle(color: Color(0xFF065F46), fontSize: 12, fontWeight: FontWeight.w500)),
-              )).toList(),
-            )
+            
+            // Show split summary line only if it's a shared group expense
+            if (!isSettleUp) ...[
+              const Divider(height: 25, color: Color(0xFFF1F5F9)),
+              const Text('Split equally between:', style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: memberNamesList.map((name) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(name, style: const TextStyle(color: Color(0xFF475569), fontSize: 11, fontWeight: FontWeight.bold)),
+                )).toList(),
+              )
+            ]
           ],
         ),
       ),

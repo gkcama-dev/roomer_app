@@ -30,7 +30,7 @@ class _MainWrapperState extends State<MainWrapper> {
       
       body: _screens[_currentIndex],
 
-      // 🗺️ NAVIGATION BAR INTEGRATION
+      // NAVIGATION BAR INTEGRATION
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {

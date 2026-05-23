@@ -5,10 +5,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:roomer/views/main_wrapper.dart';
 import 'package:roomer/views/login_screen.dart';
 import 'package:roomer/views/group_setup_screen.dart';
+import 'package:roomer/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+  NotificationService notificationService = NotificationService();
+  await notificationService.initNotifications();
+
   runApp(const RoomerApp());
 }
 
@@ -38,7 +43,10 @@ class RoomerApp extends StatelessWidget {
             );
           }
 
-          if (snapshot.hasData) {
+          if (snapshot.hasData && snapshot.data != null) {
+            
+            NotificationService().saveDeviceToken();
+
             return FutureBuilder<DocumentSnapshot>(
               future: FirebaseFirestore.instance
                   .collection('users')
@@ -51,7 +59,6 @@ class RoomerApp extends StatelessWidget {
                   );
                 }
 
-               
                 if (userSnapshot.hasData &&
                     userSnapshot.data != null &&
                     userSnapshot.data!.exists) {
@@ -65,7 +72,6 @@ class RoomerApp extends StatelessWidget {
                   }
                 }
 
-               
                 return const GroupSetupScreen();
               },
             );
