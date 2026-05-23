@@ -37,6 +37,10 @@ dependencies:
   firebase_core: ^4.9.0
   firebase_auth: ^6.5.1
   cloud_firestore: ^6.4.1
+  firebase_messaging: ^16.2.2
+  flutter_local_notifications: ^21.0.0
+  http: ^1.6.0
+  googleapis_auth: ^2.3.1
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +68,7 @@ flutter:
   # Register image assets
   assets:
     - assets/images/roomer-light-logo.png
+    - assets/service-account.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:
