@@ -80,30 +80,30 @@ class AuthService {
     return _auth.authStateChanges();
   }
 
-// 3. 🏢 CREATE NEW GROUP FUNCTION
+// CREATE NEW GROUP FUNCTION
   Future<String?> createGroup(String groupName) async {
     try {
       User? currentUser = _auth.currentUser;
       if (currentUser == null) return null;
 
-      // ඉලක්කම් 6ක අහඹු කෝඩ් එකක් සෑදීම (Random 6-digit Code)
+      // Random 6-digit Code
       final String groupCode = (100000 + (double.parse((_auth.currentUser!.uid.hashCode % 900000).toString()).toInt() % 900000)).toString();
 
-      // Firestore එකේ 'groups' කියලා අලුත් collection එකක් හදනවා
+      // Firestore 'groups' -> collection 
       await _db.collection('groups').doc(groupCode).set({
         'groupName': groupName,
         'groupCode': groupCode,
         'createdBy': currentUser.uid,
-        'members': [currentUser.uid], // මුල්ම සාමාජිකයා විදිහට Creatorව දානවා
+        'members': [currentUser.uid], 
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // දැනට ලොග් වෙලා ඉන්න පරිශීලකයාගේ (User) ගිණුමේ 'groupId' එක update කරනවා
+    
       await _db.collection('users').doc(currentUser.uid).update({
         'groupId': groupCode,
       });
 
-      return groupCode; // හදපු Group Code එක ආපසු යවනවා UI එකට පෙන්වන්න
+      return groupCode; 
     } catch (e) {
       print("Create Group Error: ${e.toString()}");
       return null;
