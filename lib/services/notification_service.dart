@@ -12,21 +12,65 @@ class NotificationService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FlutterLocalNotificationsPlugin _localNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
-  // 1. NOTIFICATION SYSTEM INITIALIZE
+  // NOTIFICATION SYSTEM INITIALIZE
   Future<void> initNotifications() async {
     NotificationSettings settings = await _fcm.requestPermission(
       alert: true, badge: true, sound: true,
     );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      print('🔔 Notification Permission Granted!');
+
+      // HIGH IMPORTANCE NOTIFICATION CHANNEL FOR ANDROID
+      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+        'high_importance_channel', // id
+        'High Importance Notifications', // title
+        description: 'This channel is used for important notifications.', // description
+        importance: Importance.max, 
+        playSound: true,
+      );
+
+      // Local Notifications Android 
       const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
       const InitializationSettings initializationSettings = InitializationSettings(android: androidSettings);
+      
       await _localNotificationsPlugin.initialize(settings: initializationSettings);
+
+      
+      await _localNotificationsPlugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
+
+      // Foreground Listner
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        RemoteNotification? notification = message.notification;
+        AndroidNotification? android = message.notification?.android;
+
+       if (notification != null && android != null) {
+          _localNotificationsPlugin.show(
+            id: notification.hashCode,          
+            title: notification.title,         
+            body: notification.body,           
+            notificationDetails: NotificationDetails( 
+              android: AndroidNotificationDetails(
+                channel.id,
+                channel.name,
+                channelDescription: channel.description,
+                icon: '@mipmap/ic_launcher',
+                importance: Importance.max,
+                priority: Priority.high,
+                playSound: true,
+              ),
+            ),
+          );
+        }
+      });
+
       await saveDeviceToken();
     }
   }
 
-  // 2. SAVE DEVICE FCM TOKEN
+  // SAVE DEVICE FCM TOKEN
   Future<void> saveDeviceToken() async {
     User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
@@ -38,7 +82,7 @@ class NotificationService {
     }
   }
 
-  // [OAUTH2 ACCESS TOKEN GENERATOR] - service-account.json Make Token 
+  //  [OAUTH2 ACCESS TOKEN GENERATOR] - service-account.json -> Token 
   Future<String> _getAccessToken() async {
     final String response = await rootBundle.loadString('assets/service-account.json');
     final accountCredentials = ServiceAccountCredentials.fromJson(response);
@@ -48,7 +92,7 @@ class NotificationService {
     return client.credentials.accessToken.data;
   }
 
-  // [REAL-TIME DISPATCHER] - Send Push Notification 
+  // Push Notification යැවීම
   Future<void> sendNotificationToGroup({
     required String groupId,
     required String title,
