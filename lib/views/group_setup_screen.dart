@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:roomer/constants/app_colors.dart'; 
 import 'package:roomer/services/auth_service.dart';
+import 'package:roomer/widgets/primary_button.dart'; 
+import 'package:roomer/widgets/custom_text_field.dart'; 
 import 'main_wrapper.dart';
 import 'custom_alert.dart';
 
@@ -16,7 +19,7 @@ class _GroupSetupScreenState extends State<GroupSetupScreen> {
   final TextEditingController _groupCodeController = TextEditingController();
   bool _isLoading = false;
 
-  // NEW GROUP CREATION LOGIC
+  // Process the generation of a unique group code and persist to Firestore
   void _handleCreateGroup() async {
     if (_groupNameController.text.isEmpty) {
       CustomAlert.show(context: context, message: 'Please enter a boarding or group name', isSuccess: false);
@@ -29,12 +32,11 @@ class _GroupSetupScreenState extends State<GroupSetupScreen> {
 
     if (createdCode != null) {
       if (mounted) {
-        
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: const Text('Group Created! 🎉'),
+            title: const Text('Group Created Successfully'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -42,7 +44,7 @@ class _GroupSetupScreenState extends State<GroupSetupScreen> {
                 const SizedBox(height: 15),
                 SelectableText(
                   createdCode,
-                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF10B981), letterSpacing: 4),
+                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primary, letterSpacing: 4),
                 ),
               ],
             ),
@@ -64,11 +66,11 @@ class _GroupSetupScreenState extends State<GroupSetupScreen> {
     }
   }
 
-  // JOIN EXISTING GROUP LOGIC
+  // Validate the entered 6-digit identifier token to link the user instance
   void _handleJoinGroup() async {
     if (_groupCodeController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a 6-digit group code')),
+        const SnackBar(content: Text('Please enter a group token')),
       );
       return;
     }
@@ -79,7 +81,7 @@ class _GroupSetupScreenState extends State<GroupSetupScreen> {
 
     if (success) {
       if (mounted) {
-        CustomAlert.show(context: context, message: 'Successfully joined the group! 😍', isSuccess: true);
+        CustomAlert.show(context: context, message: 'Successfully joined the group', isSuccess: true);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainWrapper()),
@@ -96,11 +98,13 @@ class _GroupSetupScreenState extends State<GroupSetupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Roomer Group Setup', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Roomer Group Setup', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark)),
         centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout_rounded),
+            icon: const Icon(Icons.logout_rounded, color: AppColors.textDark),
             onPressed: () async {
               await _authService.signOut();
             },
@@ -108,15 +112,15 @@ class _GroupSetupScreenState extends State<GroupSetupScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 children: [
-                  // CREATE GROUP CARD
+                  // Configuration form panel for creating groups
                   Card(
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade200)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppColors.border)),
                     color: Colors.white,
                     child: Padding(
                       padding: const EdgeInsets.all(20.0),
@@ -125,36 +129,27 @@ class _GroupSetupScreenState extends State<GroupSetupScreen> {
                         children: [
                           const Row(
                             children: [
-                              Icon(Icons.add_business_rounded, color: Color(0xFF10B981), size: 28),
+                              Icon(Icons.add_business_rounded, color: AppColors.primary, size: 28),
                               SizedBox(width: 10),
-                              Text('Create a New Boarding Group', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              Text('Create a New Boarding Group', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                             ],
                           ),
                           const SizedBox(height: 10),
-                          const Text('If you are the first person inside the app from your boarding, create a group here.', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                          const Text('If you are the first person inside the app from your boarding, create a group here.', style: TextStyle(color: AppColors.textGrey, fontSize: 13)),
                           const SizedBox(height: 20),
-                          TextField(
+                          
+                          // CustomTextField applied for Group Name input
+                          CustomTextField(
                             controller: _groupNameController,
-                            decoration: InputDecoration(
-                              hintText: 'e.g., Boys Room 04 / Api Set eka',
-                              filled: true,
-                              fillColor: const Color(0xFFF8FAFC),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                            ),
+                            hintText: 'e.g., Boys Room 04 / Api Set eka',
+                            prefixIcon: Icons.business_outlined,
                           ),
                           const SizedBox(height: 15),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF10B981),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              onPressed: _handleCreateGroup,
-                              child: const Text('Create Group', style: TextStyle(fontWeight: FontWeight.bold)),
-                            ),
+                          
+                          // PrimaryButton applied for Create Group action
+                          PrimaryButton(
+                            text: 'Create Group',
+                            onPressed: _handleCreateGroup,
                           ),
                         ],
                       ),
@@ -164,20 +159,20 @@ class _GroupSetupScreenState extends State<GroupSetupScreen> {
                   const SizedBox(height: 25),
                   const Row(
                     children: [
-                      Expanded(child: Divider()),
+                      Expanded(child: Divider(color: AppColors.border)),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 15),
-                        child: Text('OR', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                        child: Text('OR', style: TextStyle(color: AppColors.textGrey, fontWeight: FontWeight.bold)),
                       ),
-                      Expanded(child: Divider()),
+                      Expanded(child: Divider(color: AppColors.border)),
                     ],
                   ),
                   const SizedBox(height: 25),
 
-                  // JOIN GROUP CARD
+                  // Validation form layout for active invitation tokens
                   Card(
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade200)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: AppColors.border)),
                     color: Colors.white,
                     child: Padding(
                       padding: const EdgeInsets.all(20.0),
@@ -186,40 +181,31 @@ class _GroupSetupScreenState extends State<GroupSetupScreen> {
                         children: [
                           const Row(
                             children: [
-                              Icon(Icons.group_add_rounded, color: Colors.blue, size: 28),
+                              Icon(Icons.group_add_rounded, color: AppColors.secondary, size: 28),
                               SizedBox(width: 10),
-                              Text('Join an Existing Group', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              Text('Join an Existing Group', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
                             ],
                           ),
                           const SizedBox(height: 10),
-                          const Text('If your roommate has already created a group, enter that 6-digit code below.', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                          const Text('If your roommate has already created a group, enter that 6-digit code below.', style: TextStyle(color: AppColors.textGrey, fontSize: 13)),
                           const SizedBox(height: 20),
-                          TextField(
+                          
+                          // CustomTextField applied for centered Code Input configuration
+                          CustomTextField(
                             controller: _groupCodeController,
+                            hintText: '0 0 0 0 0 0',
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 4),
-                            decoration: InputDecoration(
-                              hintText: '0 0 0 0 0 0',
-                              hintStyle: const TextStyle(fontSize: 18, color: Colors.grey, letterSpacing: 2),
-                              filled: true,
-                              fillColor: const Color(0xFFF8FAFC),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                            ),
+                            letterSpacing: 4,
+                            hintStyle: const TextStyle(fontSize: 18, color: AppColors.textGrey, letterSpacing: 2),
                           ),
                           const SizedBox(height: 15),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              onPressed: _handleJoinGroup,
-                              child: const Text('Join Group', style: TextStyle(fontWeight: FontWeight.bold)),
-                            ),
+                          
+                          // PrimaryButton applied for Join Group action
+                          PrimaryButton(
+                            text: 'Join Group',
+                            backgroundColor: AppColors.secondary,
+                            onPressed: _handleJoinGroup,
                           ),
                         ],
                       ),

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:roomer/constants/app_colors.dart'; 
 import 'package:roomer/services/auth_service.dart';
+import 'package:roomer/widgets/primary_button.dart'; 
+import 'package:roomer/widgets/custom_text_field.dart'; // Imported the reusable custom input widget
 import 'login_screen.dart';
 import 'group_setup_screen.dart';
 import 'custom_alert.dart';
@@ -19,8 +22,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
+  // Process user input parameters and register a new identity profile inside Firebase
   void _register() async {
-    // Check if fields are empty
     if (_nameController.text.isEmpty || _emailController.text.isEmpty || _passwordController.text.isEmpty) {
       CustomAlert.show(context: context, message: 'Please fill all fields', isSuccess: false);
       return;
@@ -28,10 +31,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isLoading = true);
 
-    // Call Firebase Registration
     User? user = await _authService.registerWithEmail(
-      _nameController.text,
-      _emailController.text,
+      _nameController.text.trim(),
+      _emailController.text.trim(),
       _passwordController.text,
     );
 
@@ -39,11 +41,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (user != null) {
       if (mounted) {
-        // Show success snackbar and wait for it to close before navigating
-        CustomAlert.show(context: context, message: 'Registration Successful! 🎉', isSuccess: true);
-        // Wait a short moment so the user sees the success alert before navigation
+        CustomAlert.show(context: context, message: 'Registration Successful!', isSuccess: true);
+        
+        // Delay execution briefly to let the presentation alert frame render completely
         await Future.delayed(const Duration(milliseconds: 700));
         if (!mounted) return;
+        
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const GroupSetupScreen()),
@@ -59,20 +62,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, iconTheme: const IconThemeData(color: Colors.black)),
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, iconTheme: const IconThemeData(color: AppColors.textDark)),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Logo layout asset structural binding
               Center(
                 child: Column(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: const BoxDecoration(
-                        color: Color(0xFF10B981),
+                        color: AppColors.primary,
                         shape: BoxShape.circle,
                       ),
                       child: Image.asset(
@@ -86,85 +90,58 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                 ),
               ),
-              const Center(
+              Center(
                 child: Column(
                   children: [
-                    Text('Create Account', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                    SizedBox(height: 5),
-                    Text('Sign up to start splitting bills with roommates', style: TextStyle(color: Colors.grey)),
+                    const Text('Create Account', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+                    const SizedBox(height: 5),
+                    const Text('Sign up to start splitting bills with roommates', style: TextStyle(color: AppColors.textGrey)),
                   ],
                 ),
               ),
               const SizedBox(height: 35),
 
-              // Full Name Input
-              const Text('Full Name', style: TextStyle(fontWeight: FontWeight.bold)),
+              // Linked the isolated input field components dynamically
+              const Text('Full Name', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark)),
               const SizedBox(height: 8),
-              TextField(
+              CustomTextField(
                 controller: _nameController,
-                decoration: InputDecoration(
-                  hintText: 'John Doe',
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  prefixIcon: const Icon(Icons.person_outline, color: Colors.grey),
-                ),
+                hintText: 'John Doe',
+                prefixIcon: Icons.person_outline,
               ),
               const SizedBox(height: 20),
 
-              // Email Input
-              const Text('Email Address', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Email Address', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark)),
               const SizedBox(height: 8),
-              TextField(
+              CustomTextField(
                 controller: _emailController,
+                hintText: 'name@email.com',
+                prefixIcon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  hintText: 'name@email.com',
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  prefixIcon: const Icon(Icons.email_outlined, color: Colors.grey),
-                ),
               ),
               const SizedBox(height: 20),
 
-              // Password Input
-              const Text('Password', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Password', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark)),
               const SizedBox(height: 8),
-              TextField(
+              CustomTextField(
                 controller: _passwordController,
+                hintText: 'Minimum 6 characters',
+                prefixIcon: Icons.lock_outline,
                 obscureText: true,
-                decoration: InputDecoration(
-                  hintText: 'Minimum 6 characters',
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
-                ),
               ),
               const SizedBox(height: 35),
 
-              // Register Button
-              SizedBox(
-                width: double.infinity,
-                height: 55,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  ),
-                  onPressed: _isLoading ? null : _register,
-                  child: _isLoading 
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Sign Up', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
+              PrimaryButton(
+                text: 'Sign Up',
+                isLoading: _isLoading,
+                onPressed: _register,
               ),
               const SizedBox(height: 20),
+              
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Already have an account? '),
+                  const Text('Already have an account? ', style: TextStyle(color: AppColors.textDark)),
                   GestureDetector(
                     onTap: () {
                       Navigator.pushReplacement(
@@ -174,7 +151,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                     child: const Text(
                       'Login here',
-                      style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.bold),
+                      style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],

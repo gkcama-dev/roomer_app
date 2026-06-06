@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:roomer/constants/app_colors.dart'; 
 import 'package:roomer/services/expense_service.dart';
 import 'package:roomer/models/expense_model.dart';
+import 'package:roomer/widgets/primary_button.dart'; // Imported primary button
+import 'package:roomer/widgets/custom_text_field.dart'; // Imported custom text field
 import 'custom_alert.dart'; 
 
 class AddTransactionScreen extends StatefulWidget {
@@ -40,6 +43,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _loadGroupAndMembers();
   }
 
+  // Load group identifier and profile mappings for all roommates from Firestore
   void _loadGroupAndMembers() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -82,7 +86,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
-  // Save Normal Boarding Expense
+  // Validate form properties and commit a normal shared boarding expense entry
   void _saveExpense() async {
     if (_descController.text.isEmpty || _amountController.text.isEmpty) {
       CustomAlert.show(context: context, message: 'Please fill all fields', isSuccess: false);
@@ -113,13 +117,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         _descController.clear();
         _amountController.clear();
         
-        // Reset selections to include everyone again
         setState(() {
           _selectedSplitterIds.clear();
           _selectedSplitterIds.addAll(_memberIds);
         });
 
-        CustomAlert.show(context: context, message: 'Expense added successfully! 🎉', isSuccess: true);
+        CustomAlert.show(context: context, message: 'Expense added successfully!', isSuccess: true);
       }
     } catch (e) {
       if (mounted) CustomAlert.show(context: context, message: 'Failed to add expense', isSuccess: false);
@@ -128,8 +131,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
-  // Save Settle Up Transaction
- void _saveSettleUp() async {
+  // Commit a settlement type payment entry between two selected roommates
+  void _saveSettleUp() async {
     if (_settleAmountController.text.isEmpty) {
       CustomAlert.show(context: context, message: 'Please enter settlement amount', isSuccess: false);
       return;
@@ -156,13 +159,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         '$fromName settled up with $toName',
         amount,
         _groupId,
-        customPaidBy: _settleFromId,       // From User UID
-        customPaidByName: fromName,        // From User Real Name
+        customPaidBy: _settleFromId,      
+        customPaidByName: fromName,        
       );
 
       if (mounted) {
         _settleAmountController.clear();
-        CustomAlert.show(context: context, message: 'Payment recorded successfully! 💸', isSuccess: true);
+        CustomAlert.show(context: context, message: 'Payment recorded successfully!', isSuccess: true);
       }
     } catch (e) {
       if (mounted) CustomAlert.show(context: context, message: 'Failed to record payment', isSuccess: false);
@@ -174,12 +177,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   @override
   Widget build(BuildContext context) {
     if (_groupId.isEmpty || _memberNames.isEmpty) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Transaction', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+        title: const Text('New Transaction', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark)),
         centerTitle: true,
         automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
@@ -203,14 +210,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: _isExpense ? const Color(0xFF10B981) : Colors.transparent,
+                          color: _isExpense ? AppColors.primary : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Center(
                           child: Text(
                             'Expense',
                             style: TextStyle(
-                              color: _isExpense ? Colors.white : Colors.grey.shade600,
+                              color: _isExpense ? Colors.white : AppColors.textGrey,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -224,14 +231,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: !_isExpense ? const Color(0xFFF97316) : Colors.transparent,
+                          color: !_isExpense ? AppColors.secondary : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Center(
                           child: Text(
                             'Settle Up',
                             style: TextStyle(
-                              color: !_isExpense ? Colors.white : Colors.grey.shade600,
+                              color: !_isExpense ? Colors.white : AppColors.textGrey,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -245,7 +252,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             const SizedBox(height: 25),
 
             _isLoading 
-                ? const Padding(padding: EdgeInsets.all(40.0), child: CircularProgressIndicator())
+                ? const Padding(padding: EdgeInsets.all(40.0), child: CircularProgressIndicator(color: AppColors.primary))
                 : (_isExpense ? _buildExpenseForm() : _buildSettleUpForm()),
           ],
         ),
@@ -259,7 +266,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        side: const BorderSide(color: AppColors.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -268,30 +275,18 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           children: [
             const Text('Description', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF475569))),
             const SizedBox(height: 8),
-            TextField(
+            CustomTextField(
               controller: _descController,
-              decoration: InputDecoration(
-                hintText: 'Groceries, Gas bill, Rice packet...',
-                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
+              hintText: 'Groceries, Gas bill, Rice packet...',
             ),
             const SizedBox(height: 20),
             
             const Text('Amount (LKR)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF475569))),
             const SizedBox(height: 8),
-            TextField(
+            CustomTextField(
               controller: _amountController,
+              hintText: '0.00',
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                hintText: '0.00',
-                hintStyle: TextStyle(color: Colors.grey.shade400),
-                filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
             ),
             const SizedBox(height: 20),
 
@@ -300,7 +295,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: AppColors.scaffoldBg,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: DropdownButtonHideUnderline(
@@ -321,7 +316,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 22),
 
-            // 💡 [NEW IMPLEMENTATION] - Interactive "Split Between" Roommates Selector List
             const Text('Split Between', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF475569))),
             const SizedBox(height: 12),
             
@@ -349,14 +343,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFE6F4EA) : Colors.white, // Selected නම් ලා කොළ පාටයි
+                      color: isSelected ? const Color(0xFFE6F4EA) : Colors.white, 
                       borderRadius: BorderRadius.circular(15),
                       border: Border.all(
-                        color: isSelected ? const Color(0xFF10B981) : const Color(0xFFE2E8F0), // Selected නම් තද කොළ Border එකක්
+                        color: isSelected ? AppColors.primary : AppColors.border, 
                         width: 1.5,
                       ),
                       boxShadow: isSelected ? [
-                        BoxShadow(color: const Color(0xFF10B981).withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))
+                        BoxShadow(color: AppColors.primary.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))
                       ] : [],
                     ),
                     child: Row(
@@ -365,13 +359,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         Icon(
                           isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
                           size: 18,
-                          color: isSelected ? const Color(0xFF10B981) : Colors.grey,
+                          color: isSelected ? AppColors.primary : Colors.grey,
                         ),
                         const SizedBox(width: 8),
                         Text(
                           name,
                           style: TextStyle(
-                            color: isSelected ? const Color(0xFF065F46) : const Color(0xFF1E293B),
+                            color: isSelected ? const Color(0xFF065F46) : AppColors.textDark,
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                           ),
@@ -384,19 +378,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 30),
 
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  elevation: 0,
-                ),
-                onPressed: _saveExpense,
-                child: const Text('Add Expense', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
+            PrimaryButton(
+              text: 'Add Expense',
+              onPressed: _saveExpense,
             ),
           ],
         ),
@@ -410,7 +394,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
+        side: const BorderSide(color: AppColors.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -429,7 +413,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         value: _settleFromId,
                         decoration: InputDecoration(
                           filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
+                          fillColor: AppColors.scaffoldBg,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         ),
@@ -441,7 +425,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 ),
                 const Padding(
                   padding: EdgeInsets.only(top: 25, left: 8, right: 8),
-                  child: Icon(Icons.arrow_forward_rounded, color: Colors.orange),
+                  child: Icon(Icons.arrow_forward_rounded, color: AppColors.secondary),
                 ),
                 Expanded(
                   child: Column(
@@ -453,7 +437,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         value: _settleToId,
                         decoration: InputDecoration(
                           filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
+                          fillColor: AppColors.scaffoldBg,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         ),
@@ -469,32 +453,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
             const Text('Amount Paid (LKR)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF475569))),
             const SizedBox(height: 8),
-            TextField(
+            CustomTextField(
               controller: _settleAmountController,
+              hintText: '0.00',
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                hintText: '0.00',
-                hintStyle: TextStyle(color: Colors.grey.shade400),
-                filled: true,
-                fillColor: const Color(0xFFF8FAFC),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
             ),
             const SizedBox(height: 30),
 
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF97316), 
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  elevation: 0,
-                ),
-                onPressed: _saveSettleUp,
-                child: const Text('Record Payment', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
+            PrimaryButton(
+              text: 'Record Payment',
+              backgroundColor: AppColors.secondary,
+              onPressed: _saveSettleUp,
             ),
           ],
         ),
