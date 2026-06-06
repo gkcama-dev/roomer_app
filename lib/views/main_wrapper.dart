@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:roomer/constants/app_colors.dart'; // Imported the centralized colors file
 import 'package:roomer/services/auth_service.dart';
 import 'home_screen.dart'; 
 import 'add_transaction_screen.dart';
@@ -14,9 +15,9 @@ class MainWrapper extends StatefulWidget {
 
 class _MainWrapperState extends State<MainWrapper> {
   final AuthService _authService = AuthService();
-  int _currentIndex = 0; // Active Tab Index
+  int _currentIndex = 0; 
 
-  // Bottom Navigation Bar 
+  // Initialize and persist stateful screen configurations inside the wrapper layout
   final List<Widget> _screens = [
     const HomeScreen(),             
     const AddTransactionScreen(),   
@@ -27,10 +28,13 @@ class _MainWrapperState extends State<MainWrapper> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
-      body: _screens[_currentIndex],
+      // Maintain state and prevent rendering latency across navigation transitions
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
 
-      // NAVIGATION BAR INTEGRATION
+      // Navigation structural controller binding
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -39,8 +43,8 @@ class _MainWrapperState extends State<MainWrapper> {
           });
         },
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF10B981), 
-        unselectedItemColor: Colors.grey,
+        selectedItemColor: AppColors.primary, // Linked to central AppColors primary theme
+        unselectedItemColor: AppColors.textGrey, // Linked to central grey placeholder color
         showUnselectedLabels: true,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
